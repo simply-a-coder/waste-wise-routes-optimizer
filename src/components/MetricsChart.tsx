@@ -13,6 +13,23 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
   const costPerKm = 15; // INR per km
   const totalCost = (data.totalDistance * costPerKm).toFixed(0);
 
+  // Separate data for individual charts
+  const distanceData = [
+    { name: 'Current', value: parseFloat(String(data.totalDistance?.toFixed(1) || 0)), target: 25 }
+  ];
+
+  const capacityData = [
+    { name: 'Current', value: data.capacityUsed || 0, target: 1000 }
+  ];
+
+  const fuelData = [
+    { name: 'Current', value: parseFloat(String(fuelEfficiency)), target: 35 }
+  ];
+
+  const costData = [
+    { name: 'Current', value: parseInt(totalCost), target: 500 }
+  ];
+
   // Performance comparison data with realistic values
   const performanceData = [
     {
@@ -42,22 +59,6 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
       unit: '₹',
       target: 500,
       efficiency: ((500 - parseInt(totalCost)) / 500 * 100).toFixed(1)
-    }
-  ];
-
-  // Capacity breakdown
-  const capacityData = [
-    {
-      name: 'Used Capacity',
-      value: data.capacityUsed || 0,
-      percentage: ((data.capacityUsed || 0) / 1000 * 100).toFixed(1),
-      color: '#3b82f6'
-    },
-    {
-      name: 'Available Capacity',
-      value: Math.max(0, 1000 - (data.capacityUsed || 0)),
-      percentage: (Math.max(0, 1000 - (data.capacityUsed || 0)) / 1000 * 100).toFixed(1),
-      color: '#e5e7eb'
     }
   ];
 
@@ -126,32 +127,106 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
         ))}
       </div>
 
-      {/* Performance Metrics Chart */}
-      <div>
-        <h3 className="text-lg font-semibold text-white mb-4">Performance vs Targets</h3>
-        <div className="h-64 w-full bg-white/5 rounded-lg p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-              <XAxis dataKey="metric" stroke="#ffffff" fontSize={12} />
-              <YAxis stroke="#ffffff" fontSize={12} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1f2937', 
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#ffffff'
-                }}
-                formatter={(value, name) => [`${value}${performanceData.find(d => d.value === value)?.unit || ''}`, name]}
-              />
-              <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="target" fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.3} />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Individual Performance Metrics Charts */}
+      <div className="grid md:grid-cols-2 gap-8">
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-4">Distance Performance</h3>
+          <div className="h-48 w-full bg-white/5 rounded-lg p-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={distanceData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                <XAxis dataKey="name" stroke="#ffffff" fontSize={12} />
+                <YAxis stroke="#ffffff" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1f2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#ffffff'
+                  }}
+                  formatter={(value, name) => [`${value} km`, name]}
+                />
+                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Current Distance" />
+                <Bar dataKey="target" fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.3} name="Target Distance" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-4">Capacity Performance</h3>
+          <div className="h-48 w-full bg-white/5 rounded-lg p-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={capacityData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                <XAxis dataKey="name" stroke="#ffffff" fontSize={12} />
+                <YAxis stroke="#ffffff" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1f2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#ffffff'
+                  }}
+                  formatter={(value, name) => [`${value} kg`, name]}
+                />
+                <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} name="Used Capacity" />
+                <Bar dataKey="target" fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.3} name="Total Capacity" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-4">Fuel Efficiency</h3>
+          <div className="h-48 w-full bg-white/5 rounded-lg p-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={fuelData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                <XAxis dataKey="name" stroke="#ffffff" fontSize={12} />
+                <YAxis stroke="#ffffff" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1f2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#ffffff'
+                  }}
+                  formatter={(value, name) => [`${value} kg/km`, name]}
+                />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Current Efficiency" />
+                <Bar dataKey="target" fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.3} name="Target Efficiency" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-4">Cost Analysis</h3>
+          <div className="h-48 w-full bg-white/5 rounded-lg p-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={costData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                <XAxis dataKey="name" stroke="#ffffff" fontSize={12} />
+                <YAxis stroke="#ffffff" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1f2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#ffffff'
+                  }}
+                  formatter={(value, name) => [`₹${value}`, name]}
+                />
+                <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Current Cost" />
+                <Bar dataKey="target" fill="#ef4444" radius={[4, 4, 0, 0]} opacity={0.3} name="Target Cost" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      {/* Algorithm Comparison and Capacity */}
+      {/* Algorithm Comparison and Capacity Utilization */}
       <div className="grid md:grid-cols-2 gap-8">
         <div>
           <h3 className="text-lg font-semibold text-white mb-4">Algorithm Efficiency Comparison</h3>
@@ -214,14 +289,14 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
         </div>
       </div>
 
-      {/* Route Efficiency Trend */}
+      {/* Route Efficiency Trend - Enhanced Colors */}
       {routeEfficiencyData.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-white mb-4">Route Efficiency Progression</h3>
           <div className="h-64 w-full bg-white/5 rounded-lg p-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={routeEfficiencyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff40" />
                 <XAxis dataKey="bin" stroke="#ffffff" fontSize={12} />
                 <YAxis stroke="#ffffff" fontSize={12} />
                 <Tooltip 
@@ -236,15 +311,17 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
                   type="monotone" 
                   dataKey="cumulativeCapacity" 
                   stackId="1"
-                  stroke="#8b5cf6" 
-                  fill="#8b5cf680" 
-                  name="Capacity (kg)"
+                  stroke="#06d6a0" 
+                  fill="#06d6a040" 
+                  strokeWidth={3}
+                  name="Cumulative Capacity (kg)"
                 />
                 <Line 
                   type="monotone" 
                   dataKey="efficiency" 
-                  stroke="#f59e0b" 
-                  strokeWidth={2}
+                  stroke="#ffd166" 
+                  strokeWidth={4}
+                  dot={{ fill: '#ffd166', strokeWidth: 2, r: 4 }}
                   name="Efficiency (kg/km)"
                 />
               </AreaChart>
