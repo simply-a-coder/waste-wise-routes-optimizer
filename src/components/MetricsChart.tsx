@@ -1,4 +1,3 @@
-
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
 
 interface MetricsChartProps {
@@ -18,7 +17,7 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
   const performanceData = [
     {
       metric: 'Distance',
-      value: parseFloat(data.totalDistance?.toFixed(1)) || 0,
+      value: parseFloat(String(data.totalDistance?.toFixed(1) || 0)),
       unit: 'km',
       target: 25,
       efficiency: ((25 - (data.totalDistance || 0)) / 25 * 100).toFixed(1)
@@ -32,10 +31,10 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
     },
     {
       metric: 'Fuel Efficiency',
-      value: parseFloat(fuelEfficiency),
+      value: parseFloat(String(fuelEfficiency)),
       unit: 'kg/km',
       target: 35,
-      efficiency: (parseFloat(fuelEfficiency) / 35 * 100).toFixed(1)
+      efficiency: (parseFloat(String(fuelEfficiency)) / 35 * 100).toFixed(1)
     },
     {
       metric: 'Cost',
