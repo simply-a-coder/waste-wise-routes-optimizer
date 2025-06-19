@@ -1,3 +1,4 @@
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
 
 interface MetricsChartProps {
@@ -106,6 +107,15 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
     efficiency: (((data.path.slice(0, index + 1).reduce((sum: number, b: any) => sum + (b.fillLevel * 10 || 0), 0)) / ((index + 1) / totalBins * data.totalDistance)) || 0).toFixed(1)
   })) || [];
 
+  // Pie chart data for capacity utilization
+  const pieData = [
+    { name: 'Used', value: data.capacityUsed || 0, fill: '#10b981' },
+    { name: 'Available', value: 1000 - (data.capacityUsed || 0), fill: '#374151' }
+  ];
+
+  // Define colors for consistency
+  const COLORS = ['#10b981', '#374151'];
+
   return (
     <div className="space-y-8">
       {/* Key Performance Indicators */}
@@ -127,10 +137,10 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
         ))}
       </div>
 
-      {/* Individual Performance Metrics Charts */}
+      {/* Individual Performance vs Target Charts */}
       <div className="grid md:grid-cols-2 gap-8">
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4">Distance Performance</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Distance Performance vs Target</h3>
           <div className="h-48 w-full bg-white/5 rounded-lg p-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={distanceData}>
@@ -154,7 +164,7 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4">Capacity Performance</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Capacity Performance vs Target</h3>
           <div className="h-48 w-full bg-white/5 rounded-lg p-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={capacityData}>
@@ -178,7 +188,7 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4">Fuel Efficiency</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Fuel Efficiency vs Target</h3>
           <div className="h-48 w-full bg-white/5 rounded-lg p-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={fuelData}>
@@ -202,7 +212,7 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold text-white mb-4">Cost Analysis</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Cost vs Target</h3>
           <div className="h-48 w-full bg-white/5 rounded-lg p-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={costData}>
@@ -257,7 +267,7 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={capacityData}
+                  data={pieData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -265,8 +275,8 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {capacityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -276,7 +286,7 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
                     borderRadius: '8px',
                     color: '#ffffff'
                   }}
-                  formatter={(value, name) => [`${value} kg (${capacityData.find(d => d.value === value)?.percentage}%)`, name]}
+                  formatter={(value, name) => [`${value} kg (${((value as number) / 1000 * 100).toFixed(1)}%)`, name]}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -289,14 +299,14 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
         </div>
       </div>
 
-      {/* Route Efficiency Trend - Enhanced Colors */}
+      {/* Route Efficiency Trend - Enhanced Colors for Better Visibility */}
       {routeEfficiencyData.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-white mb-4">Route Efficiency Progression</h3>
           <div className="h-64 w-full bg-white/5 rounded-lg p-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={routeEfficiencyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff40" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff60" />
                 <XAxis dataKey="bin" stroke="#ffffff" fontSize={12} />
                 <YAxis stroke="#ffffff" fontSize={12} />
                 <Tooltip 
@@ -311,17 +321,17 @@ const MetricsChart = ({ data, algorithm }: MetricsChartProps) => {
                   type="monotone" 
                   dataKey="cumulativeCapacity" 
                   stackId="1"
-                  stroke="#06d6a0" 
-                  fill="#06d6a040" 
-                  strokeWidth={3}
+                  stroke="#00ff88" 
+                  fill="#00ff8860" 
+                  strokeWidth={4}
                   name="Cumulative Capacity (kg)"
                 />
                 <Line 
                   type="monotone" 
                   dataKey="efficiency" 
-                  stroke="#ffd166" 
-                  strokeWidth={4}
-                  dot={{ fill: '#ffd166', strokeWidth: 2, r: 4 }}
+                  stroke="#ffff00" 
+                  strokeWidth={5}
+                  dot={{ fill: '#ffff00', strokeWidth: 3, r: 5 }}
                   name="Efficiency (kg/km)"
                 />
               </AreaChart>
