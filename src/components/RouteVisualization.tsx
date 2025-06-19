@@ -33,15 +33,18 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
 
     // Calculate bounds and scale with padding
     const bounds = calculateBounds(path);
-    const padding = 80;
+    const padding = 120; // Increased padding for labels
     const scale = calculateScale(bounds, rect.width - padding * 2, rect.height - padding * 2);
     const offsetX = padding;
     const offsetY = padding;
 
+    // Adjust overlapping points before drawing
+    const adjustedPoints = adjustOverlappingPoints(path, bounds, scale, offsetX, offsetY);
+
     // Draw route elements in order for better layering
-    drawConnections(ctx, path, bounds, scale, offsetX, offsetY);
-    drawPoints(ctx, path, bounds, scale, offsetX, offsetY);
-    drawLabels(ctx, path, bounds, scale, offsetX, offsetY);
+    drawConnections(ctx, adjustedPoints, bounds, scale, offsetX, offsetY);
+    drawPoints(ctx, adjustedPoints, bounds, scale, offsetX, offsetY);
+    drawLabels(ctx, adjustedPoints, bounds, scale, offsetX, offsetY);
 
   }, [path, algorithm]);
 
@@ -55,7 +58,6 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
-    // Draw subtle grid
     ctx.strokeStyle = '#ffffff15';
     ctx.lineWidth = 1;
     
@@ -90,7 +92,52 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
     const latRange = bounds.maxLat - bounds.minLat || 0.01;
     const lngRange = bounds.maxLng - bounds.minLng || 0.01;
     
-    return Math.min(width / lngRange, height / latRange) * 0.8; // 0.8 for some margin
+    return Math.min(width / lngRange, height / latRange) * 0.6; // Reduced scale for more spacing
+  };
+
+  // New function to adjust overlapping points
+  const adjustOverlappingPoints = (points: any[], bounds: any, scale: number, offsetX: number, offsetY: number) => {
+    const adjustedPoints = points.map((point, index) => ({
+      ...point,
+      originalIndex: index,
+      adjustedX: offsetX + (point.lng - bounds.minLng) * scale,
+      adjustedY: offsetY + (bounds.maxLat - point.lat) * scale
+    }));
+
+    const minDistance = 35; // Minimum distance between points
+    const maxIterations = 50;
+
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      let hasOverlap = false;
+
+      for (let i = 0; i < adjustedPoints.length; i++) {
+        for (let j = i + 1; j < adjustedPoints.length; j++) {
+          const point1 = adjustedPoints[i];
+          const point2 = adjustedPoints[j];
+          
+          const dx = point1.adjustedX - point2.adjustedX;
+          const dy = point1.adjustedY - point2.adjustedY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < minDistance) {
+            hasOverlap = true;
+            
+            // Calculate repulsion force
+            const angle = Math.atan2(dy, dx);
+            const pushDistance = (minDistance - distance) / 2;
+            
+            point1.adjustedX += Math.cos(angle) * pushDistance;
+            point1.adjustedY += Math.sin(angle) * pushDistance;
+            point2.adjustedX -= Math.cos(angle) * pushDistance;
+            point2.adjustedY -= Math.sin(angle) * pushDistance;
+          }
+        }
+      }
+
+      if (!hasOverlap) break;
+    }
+
+    return adjustedPoints;
   };
 
   const drawConnections = (ctx: CanvasRenderingContext2D, points: any[], bounds: any, scale: number, offsetX: number, offsetY: number) => {
@@ -107,8 +154,8 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
     ctx.beginPath();
     for (let i = 0; i < points.length; i++) {
       const point = points[i];
-      const x = offsetX + (point.lng - bounds.minLng) * scale;
-      const y = offsetY + (bounds.maxLat - point.lat) * scale;
+      const x = point.adjustedX || (offsetX + (point.lng - bounds.minLng) * scale);
+      const y = point.adjustedY || (offsetY + (bounds.maxLat - point.lat) * scale);
 
       if (i === 0) {
         ctx.moveTo(x, y);
@@ -130,10 +177,10 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
       const current = points[i];
       const next = points[i + 1];
       
-      const x1 = offsetX + (current.lng - bounds.minLng) * scale;
-      const y1 = offsetY + (bounds.maxLat - current.lat) * scale;
-      const x2 = offsetX + (next.lng - bounds.minLng) * scale;
-      const y2 = offsetY + (bounds.maxLat - next.lat) * scale;
+      const x1 = current.adjustedX || (offsetX + (current.lng - bounds.minLng) * scale);
+      const y1 = current.adjustedY || (offsetY + (bounds.maxLat - current.lat) * scale);
+      const x2 = next.adjustedX || (offsetX + (next.lng - bounds.minLng) * scale);
+      const y2 = next.adjustedY || (offsetY + (bounds.maxLat - next.lat) * scale);
 
       // Calculate arrow position (3/4 along the line)
       const arrowX = x1 + (x2 - x1) * 0.75;
@@ -164,37 +211,37 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
 
   const drawPoints = (ctx: CanvasRenderingContext2D, points: any[], bounds: any, scale: number, offsetX: number, offsetY: number) => {
     points.forEach((point, index) => {
-      const x = offsetX + (point.lng - bounds.minLng) * scale;
-      const y = offsetY + (bounds.maxLat - point.lat) * scale;
+      const x = point.adjustedX || (offsetX + (point.lng - bounds.minLng) * scale);
+      const y = point.adjustedY || (offsetY + (bounds.maxLat - point.lat) * scale);
 
       // Determine point style
       let color = '#3b82f6';
-      let size = 10;
+      let size = 12; // Increased size for better visibility
       let borderColor = '#ffffff';
 
       if (point.id === 'start') {
         color = '#10b981';
-        size = 14;
+        size = 16;
         borderColor = '#ffffff';
       } else if (point.id === 'end') {
         color = '#ef4444';
-        size = 14;
+        size = 16;
         borderColor = '#ffffff';
       } else if (point.fillLevel && point.fillLevel >= 90) {
         color = '#f59e0b';
-        size = 12;
+        size = 14;
         borderColor = '#ffffff';
       }
 
       // Draw point shadow
-      ctx.fillStyle = '#00000060';
+      ctx.fillStyle = '#00000080';
       ctx.beginPath();
-      ctx.arc(x + 3, y + 3, size, 0, 2 * Math.PI);
+      ctx.arc(x + 2, y + 2, size, 0, 2 * Math.PI);
       ctx.fill();
 
       // Draw point with glow
       ctx.shadowColor = color;
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 12;
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(x, y, size, 0, 2 * Math.PI);
@@ -208,11 +255,11 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
 
       // Draw point number with better visibility
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px Arial';
+      ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.strokeText((index + 1).toString(), x, y);
       ctx.fillText((index + 1).toString(), x, y);
     });
@@ -222,38 +269,96 @@ const RouteVisualization = ({ path, algorithm }: RouteVisualizationProps) => {
     ctx.font = '13px Arial';
     ctx.textAlign = 'center';
 
+    // Calculate label positions to avoid overlaps
+    const labelPositions: { x: number; y: number; width: number; height: number; text: string }[] = [];
+
     points.forEach((point, index) => {
-      const x = offsetX + (point.lng - bounds.minLng) * scale;
-      const y = offsetY + (bounds.maxLat - point.lat) * scale;
+      const x = point.adjustedX || (offsetX + (point.lng - bounds.minLng) * scale);
+      const y = point.adjustedY || (offsetY + (bounds.maxLat - point.lat) * scale);
 
       // Truncate long location names
       let label = point.location || `Point ${index + 1}`;
-      if (label.length > 20) {
-        label = label.substring(0, 17) + '...';
+      if (label.length > 18) {
+        label = label.substring(0, 15) + '...';
       }
 
       // Measure text for background sizing
       const textMetrics = ctx.measureText(label);
-      const labelWidth = textMetrics.width + 16;
-      const labelHeight = 24;
+      const labelWidth = textMetrics.width + 20;
+      const labelHeight = 28;
 
-      // Position label to avoid overlap with points
-      const labelY = y - 50;
+      // Try different positions to avoid overlaps
+      const positions = [
+        { x: x, y: y - 60 }, // Top
+        { x: x, y: y + 60 }, // Bottom
+        { x: x - 80, y: y - 30 }, // Left
+        { x: x + 80, y: y - 30 }, // Right
+        { x: x - 60, y: y - 50 }, // Top-left
+        { x: x + 60, y: y - 50 }, // Top-right
+        { x: x - 60, y: y + 50 }, // Bottom-left
+        { x: x + 60, y: y + 50 }  // Bottom-right
+      ];
+
+      let bestPosition = positions[0];
+      let minOverlaps = Infinity;
+
+      for (const pos of positions) {
+        let overlaps = 0;
+        const testRect = {
+          x: pos.x - labelWidth / 2,
+          y: pos.y - labelHeight / 2,
+          width: labelWidth,
+          height: labelHeight
+        };
+
+        // Check overlap with existing labels
+        for (const existing of labelPositions) {
+          if (testRect.x < existing.x + existing.width &&
+              testRect.x + testRect.width > existing.x &&
+              testRect.y < existing.y + existing.height &&
+              testRect.y + testRect.height > existing.y) {
+            overlaps++;
+          }
+        }
+
+        if (overlaps < minOverlaps) {
+          minOverlaps = overlaps;
+          bestPosition = pos;
+        }
+      }
+
+      labelPositions.push({
+        x: bestPosition.x - labelWidth / 2,
+        y: bestPosition.y - labelHeight / 2,
+        width: labelWidth,
+        height: labelHeight,
+        text: label
+      });
 
       // Draw label background with better contrast
-      ctx.fillStyle = '#000000cc';
-      ctx.strokeStyle = '#ffffff40';
+      ctx.fillStyle = '#000000dd';
+      ctx.strokeStyle = '#ffffff60';
       ctx.lineWidth = 1;
-      ctx.fillRect(x - labelWidth / 2, labelY - 12, labelWidth, labelHeight);
-      ctx.strokeRect(x - labelWidth / 2, labelY - 12, labelWidth, labelHeight);
+      ctx.fillRect(bestPosition.x - labelWidth / 2, bestPosition.y - labelHeight / 2, labelWidth, labelHeight);
+      ctx.strokeRect(bestPosition.x - labelWidth / 2, bestPosition.y - labelHeight / 2, labelWidth, labelHeight);
+
+      // Draw connecting line from point to label
+      ctx.strokeStyle = '#ffffff80';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(bestPosition.x, bestPosition.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
       // Draw label text with shadow for better readability
       ctx.fillStyle = '#000000';
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 3;
-      ctx.strokeText(label, x, labelY);
+      ctx.strokeText(label, bestPosition.x, bestPosition.y);
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(label, x, labelY);
+      ctx.fillText(label, bestPosition.x, bestPosition.y);
     });
   };
 
