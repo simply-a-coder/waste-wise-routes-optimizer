@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Route, Settings, MapPin, Truck } from "lucide-react";
+import { ArrowLeft, Route, Settings, MapPin, Truck, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { routeService } from "@/services/routeService";
 
+interface BinData {
+  id: string;
+  location: string;
+  fillLevel: number;
+  lat: number;
+  lng: number;
+}
+
 const RouteSelection = () => {
   const [algorithm, setAlgorithm] = useState("");
   const [truckCapacity, setTruckCapacity] = useState("1000");
@@ -17,15 +25,27 @@ const RouteSelection = () => {
   const [endPoint, setEndPoint] = useState({ lat: "", lng: "" });
   const [selectedBins, setSelectedBins] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [customBins, setCustomBins] = useState<BinData[]>([]);
+  const [newBinForm, setNewBinForm] = useState({
+    location: "",
+    fillLevel: "",
+    lat: "",
+    lng: ""
+  });
 
-  // Mock bin data
-  const availableBins = [
-    { id: "bin1", location: "Main Street & 1st Ave", fillLevel: 85, lat: 40.7128, lng: -74.0060 },
-    { id: "bin2", location: "Park Avenue & 2nd St", fillLevel: 92, lat: 40.7589, lng: -73.9851 },
-    { id: "bin3", location: "Broadway & 3rd St", fillLevel: 78, lat: 40.7505, lng: -73.9934 },
-    { id: "bin4", location: "5th Avenue & Central", fillLevel: 95, lat: 40.7614, lng: -73.9776 },
-    { id: "bin5", location: "Wall Street Corner", fillLevel: 88, lat: 40.7074, lng: -74.0113 }
-  ];
+  // Dehradun-specific bin locations
+  const [availableBins, setAvailableBins] = useState<BinData[]>([
+    { id: "bin1", location: "Rajpur Road Market", fillLevel: 85, lat: 30.3165, lng: 78.0322 },
+    { id: "bin2", location: "Paltan Bazaar Junction", fillLevel: 92, lat: 30.3255, lng: 78.0367 },
+    { id: "bin3", location: "Gandhi Road Circle", fillLevel: 78, lat: 30.3209, lng: 78.0348 },
+    { id: "bin4", location: "Clock Tower Area", fillLevel: 95, lat: 30.3165, lng: 78.0322 },
+    { id: "bin5", location: "Race Course Market", fillLevel: 88, lat: 30.3045, lng: 78.0445 },
+    { id: "bin6", location: "Prem Nagar Chowk", fillLevel: 72, lat: 30.2967, lng: 78.0436 },
+    { id: "bin7", location: "ISBT Dehradun", fillLevel: 89, lat: 30.3074, lng: 78.0519 },
+    { id: "bin8", location: "Dehradun Railway Station", fillLevel: 91, lat: 30.3398, lng: 78.0427 }
+  ]);
+
+  const allBins = [...availableBins, ...customBins];
 
   const handleBinSelection = (binId: string, checked: boolean) => {
     if (checked) {
@@ -33,6 +53,33 @@ const RouteSelection = () => {
     } else {
       setSelectedBins(selectedBins.filter(id => id !== binId));
     }
+  };
+
+  const addCustomBin = () => {
+    if (!newBinForm.location || !newBinForm.fillLevel) {
+      alert("Please fill in location and fill level");
+      return;
+    }
+
+    const newBin: BinData = {
+      id: `custom_${Date.now()}`,
+      location: newBinForm.location,
+      fillLevel: parseInt(newBinForm.fillLevel),
+      lat: parseFloat(newBinForm.lat) || (30.3165 + (Math.random() - 0.5) * 0.1),
+      lng: parseFloat(newBinForm.lng) || (78.0322 + (Math.random() - 0.5) * 0.1)
+    };
+
+    setCustomBins([...customBins, newBin]);
+    setNewBinForm({ location: "", fillLevel: "", lat: "", lng: "" });
+  };
+
+  const removeBin = (binId: string) => {
+    if (binId.startsWith('custom_')) {
+      setCustomBins(customBins.filter(bin => bin.id !== binId));
+    } else {
+      setAvailableBins(availableBins.filter(bin => bin.id !== binId));
+    }
+    setSelectedBins(selectedBins.filter(id => id !== binId));
   };
 
   const handleOptimize = async () => {
@@ -43,13 +90,19 @@ const RouteSelection = () => {
 
     setLoading(true);
     try {
-      const bins = availableBins.filter(bin => selectedBins.includes(bin.id));
+      const bins = allBins.filter(bin => selectedBins.includes(bin.id));
       const result = await routeService.optimizeRoute({
         algorithm,
         bins,
         truckCapacity: parseInt(truckCapacity),
-        startPoint: { lat: parseFloat(startPoint.lat) || 40.7128, lng: parseFloat(startPoint.lng) || -74.0060 },
-        endPoint: { lat: parseFloat(endPoint.lat) || 40.7128, lng: parseFloat(endPoint.lng) || -74.0060 }
+        startPoint: { 
+          lat: parseFloat(startPoint.lat) || 30.3165, 
+          lng: parseFloat(startPoint.lng) || 78.0322 
+        },
+        endPoint: { 
+          lat: parseFloat(endPoint.lat) || 30.3165, 
+          lng: parseFloat(endPoint.lng) || 78.0322 
+        }
       });
 
       // Navigate to results with the optimization data
@@ -84,10 +137,10 @@ const RouteSelection = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 animate-fade-in">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Multi-Algorithm Route Optimization
+              Dehradun Waste Collection Route Optimizer
             </h1>
             <p className="text-xl text-blue-100">
-              Choose your algorithm and configure your collection route
+              Select bins across Dehradun and optimize your collection route
             </p>
           </div>
 
@@ -167,17 +220,59 @@ const RouteSelection = () => {
               </CardContent>
             </Card>
 
-            {/* Bin Selection */}
+            {/* Bin Selection and Management */}
             <Card className="lg:col-span-2 bg-white/10 backdrop-blur-md border-white/20 animate-slide-in-right">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  Select Bins for Collection
+                  Manage Bins in Dehradun ({allBins.length} total)
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {availableBins.map((bin) => (
+                {/* Add New Bin */}
+                <div className="mb-6 p-4 bg-white/10 rounded-lg border border-white/20">
+                  <h4 className="text-white font-semibold mb-3">Add New Bin Location</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Input
+                      placeholder="e.g., Mussoorie Road Junction"
+                      value={newBinForm.location}
+                      onChange={(e) => setNewBinForm({...newBinForm, location: e.target.value})}
+                      className="bg-white/20 border-white/30 text-white placeholder:text-gray-300"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Fill Level (%)"
+                      min="0"
+                      max="100"
+                      value={newBinForm.fillLevel}
+                      onChange={(e) => setNewBinForm({...newBinForm, fillLevel: e.target.value})}
+                      className="bg-white/20 border-white/30 text-white placeholder:text-gray-300"
+                    />
+                    <Input
+                      placeholder="Latitude (optional)"
+                      value={newBinForm.lat}
+                      onChange={(e) => setNewBinForm({...newBinForm, lat: e.target.value})}
+                      className="bg-white/20 border-white/30 text-white placeholder:text-gray-300"
+                    />
+                    <Input
+                      placeholder="Longitude (optional)"
+                      value={newBinForm.lng}
+                      onChange={(e) => setNewBinForm({...newBinForm, lng: e.target.value})}
+                      className="bg-white/20 border-white/30 text-white placeholder:text-gray-300"
+                    />
+                  </div>
+                  <Button
+                    onClick={addCustomBin}
+                    className="mt-3 bg-green-600 hover:bg-green-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Bin
+                  </Button>
+                </div>
+
+                {/* Bin List */}
+                <div className="grid md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                  {allBins.map((bin) => (
                     <div
                       key={bin.id}
                       className="flex items-center space-x-3 p-4 bg-white/10 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
@@ -201,6 +296,14 @@ const RouteSelection = () => {
                             {bin.fillLevel >= 90 ? 'Critical' :
                              bin.fillLevel >= 75 ? 'High' : 'Medium'}
                           </div>
+                          {bin.id.startsWith('custom_') && (
+                            <button
+                              onClick={() => removeBin(bin.id)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -211,7 +314,7 @@ const RouteSelection = () => {
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-white">Selected Bins: {selectedBins.length}</span>
                     <span className="text-blue-200">
-                      Est. Load: {availableBins
+                      Est. Load: {allBins
                         .filter(bin => selectedBins.includes(bin.id))
                         .reduce((sum, bin) => sum + (bin.fillLevel * 10), 0)}kg
                     </span>
